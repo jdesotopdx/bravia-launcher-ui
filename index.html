@@ -581,7 +581,7 @@ function renderMatch(){
   $('#res').style.display='flex';
   $('#res').innerHTML=list.map(function(c,n){return '<div class="pst'+(n===m.ri?' f':'')+'" style="width:288px"><div class="pp" style="width:288px;height:432px;border-radius:22px"><img src="posters/'+c.img+'.jpg"></div><div class="tt" style="margin-top:12px;font-size:24px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(c.t)+'</div></div>'}).join('');
   $('#res').style.transform='translateX('+(-Math.max(0,m.ri-4)*312)+'px)';
-  $('#rhint').style.display='block';$('#rhint').textContent=list.length?'OK: trailer and where to watch.  Back: start over.':'';
+  $('#rhint').style.display='block';$('#rhint').textContent='';
 }
 function matchVote(yes){
   var m=S.mm,d=deck(),who=matchPlayers()[m.turn];
@@ -646,7 +646,7 @@ function openFilm(it){
       S.film.pl=new YT.Player('ytp',{width:960,height:540,videoId:tid,playerVars:pv,events:{onReady:function(e){try{e.target.unMute();e.target.setVolume(100);e.target.playVideo()}catch(x){}}}});
     });
   }else{tr.style.backgroundImage='';tr.innerHTML=''}
-  $('#finfo').innerHTML='<h1>'+esc(it.t)+'</h1><div class="y">'+esc(it.y||'')+'</div><div class="fr">'+(fr.length?'Free: '+esc(fr.join(', ')):(w?'No free option right now':''))+'</div>'+(w&&w.trailer?'<div class="y" style="margin-top:24px">Up, then OK for full screen.  Play and pause work.</div>':'');
+  $('#finfo').innerHTML='<h1>'+esc(it.t)+'</h1><div class="y">'+esc(it.y||'')+'</div><div class="fr">'+(fr.length?'Free: '+esc(fr.join(', ')):(w?'No free option right now':''))+'</div>';
   renderFilm();$('#film').classList.add('on');
 }
 function renderFilm(){
@@ -750,19 +750,19 @@ function renderMood(){
     var q=['What are you in the mood for?','How long do you have?'][m.step];
     $('#mdh').textContent=q;
     var pre=[];if(m.a.mood)pre.push(MD_MOODS.filter(function(x){return x.id===m.a.mood})[0].a);if(m.a.len)pre.push(MD_LEN.filter(function(x){return x.id===m.a.len})[0].a);
-    $('#mdsub').textContent=pre.length?pre.join('  ·  '):'Two questions, then tonight\u2019s picks';
+    $('#mdsub').textContent=pre.length?pre.join('  ·  '):'';
     $('#mdopts').style.display='flex';
     $('#mdopts').innerHTML=mdOpts().map(function(o,n){return '<div class="mo'+(n===m.i?' f':'')+'"><div class="a">'+esc(o.a)+'</div><div class="b">'+esc(o.b)+'</div></div>'}).join('');
     return;
   }
   var r=m.res;
   $('#mdh').textContent=r.length?'Tonight\u2019s picks':'Nothing matches yet';
-  $('#mdsub').textContent=!r.length?'Press Back and loosen one answer':(r.some(function(x){return x.ex})?'Arrows to browse, OK for the trailer and where to watch':'No exact match for that mood. These are the closest');
+  $('#mdsub').textContent=(r.length&&!r.some(function(x){return x.ex}))?'No exact match for that mood. These are the closest':'';
   $('#mdres').style.display='block';
   $('#mdres').innerHTML='<div id="mdin">'+r.map(function(x,n){return '<div class="mr'+(n===m.i?' f':'')+'"><div class="pp"><img src="posters/'+x.c.img+'.jpg"></div><div class="tt">'+esc(x.g.t)+'</div><div class="nt">'+esc(x.g.note)+'</div><div class="av">'+esc(x.av.tag)+'</div></div>'}).join('')+'</div>';
   var cd=$('#mdin').children[0];
   if(cd){var rh=cd.offsetHeight+24;$('#mdin').style.transform='translateY('+(-Math.floor(m.i/5)*rh)+'px)'}
-  $('#mdhint').textContent=r.length>5?'Up and down for more picks. Back: change an answer':'Back: change an answer';
+  $('#mdhint').textContent='';
 }
 function moodKey(k){
   var m=S.md,res=m.step>=2,n=res?m.res.length:mdOpts().length;
