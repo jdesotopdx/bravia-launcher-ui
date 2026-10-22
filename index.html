@@ -177,7 +177,8 @@ html[data-theme=honey] #sky::after{content:'';position:absolute;inset:0;backgrou
 .mo .b{font-size:26px;line-height:1.3;color:var(--dim)}
 .mo.f{background:var(--focusbg);color:var(--focusfg);box-shadow:0 0 0 4px rgba(var(--ring),.9),0 0 36px rgba(var(--glow),.8)}
 .mo.f .b{color:inherit;opacity:.8}
-#mdres{left:96px;top:236px;width:1728px;display:flex;gap:24px}
+#mdres{left:80px;top:226px;width:1760px;height:710px;overflow:hidden}
+#mdin{display:grid;grid-template-columns:repeat(5,1fr);gap:24px;padding:10px 16px 0;transition:transform .25s ease}
 .mr{flex:1;min-width:0}
 .mr .pp{width:100%;height:auto;aspect-ratio:2/3;border-radius:22px}
 .mr.f .pp{transform:scale(1.04);box-shadow:0 0 0 4px rgba(var(--ring),.95),0 0 40px rgba(var(--glow),.85)}
@@ -486,9 +487,13 @@ function settingsRows(){
     {l:'Theme',v:themeLabel(),f:function(){cycleTheme(1);renderSettings()},lr:function(d){cycleTheme(d);renderSettings()}},
     {l:'Apps',v:S.apps.length+' installed',f:function(){closeSettings();openDrawer('all')}},
     {l:'Hidden Apps',v:S.hidden.length?S.hidden.length+' hidden':'',f:function(){closeSettings();openDrawer('hid')}},
-    {l:'TV Settings',v:'',f:function(){TV.settings()}}
+    {l:'TV Settings',v:'',f:function(){TV.settings()}},
+    {l:'Launcher update',v:updateValue(),f:function(){if(updState()==='ready')TV.installUpdate();else{try{TV.checkUpdates()}catch(e){}toast('Checking for updates');setTimeout(renderSettings,4000)}}}
   ];
 }
+function updState(){try{return TV.updateState()}catch(e){return ''}}
+function updateValue(){var v='';try{v='Build '+TV.version()}catch(e){}return updState()==='ready'?'Ready to install':(v||'Up to date')}
+window.onUpdateReady=function(){toast('A launcher update is ready. Settings, Launcher update, OK to install.');if(S.set.on)renderSettings()};
 function homeChoices(){
   return[
     {l:'Roseto',sub:'Your apps, no ads, with Watch tonight and Movie Match',cur:rosetoOn(),f:function(){if(!rosetoOn()&&!S.mode.busy)TV.setMode('roseto');S.set.screen='main';S.set.i=0;renderSettings()}},
@@ -701,7 +706,6 @@ var MD_MOODS=[
  {id:'real',a:'Real life',b:'Documentary and true stories'},
  {id:'dream',a:'Dreamlike',b:'Poetry, mood, images'}];
 var MD_LEN=[{id:'s',a:'Short',b:'Under 100 minutes'},{id:'m',a:'A normal film',b:'About 100 to 130 minutes'},{id:'l',a:'All night',b:'Long and immersive'}];
-var MD_WHERE=[{id:'free',a:'Free tonight',b:'Kanopy or Hoopla'},{id:'mine',a:'My services',b:'Included, no rental'},{id:'any',a:'Anything',b:'Rentals are fine'}];
 var MD_HAVE=/^(netflix|amazon prime video|prime video|max|hbo max|apple tv|kanopy|hoopla|mubi|plex|youtube|hulu|disney|peacock|paramount)/i;
 function mdNorm(t){return String(t).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
 function mdWatched(){
@@ -723,14 +727,14 @@ function mdResults(a){
   var byHash={};(DATA.tonight||[]).concat(DATA.lists||[],DATA.gems||[]).forEach(function(c){if(c.img)byHash[c.img]=c});
   Object.keys(M).forEach(function(h){
     var g=M[h],c=byHash[h];if(!c||seen[mdNorm(g.t)])return;
-    var av=mdAvail(watchFor(c),a.where);
+    var av=mdAvail(watchFor(c),'any');
     if(!av.ok)return;
-    var sc=(g.m.indexOf(a.mood)>=0?100:0)+(g.len===a.len?30:0)+(av.free?10:0);
+    var sc=(g.m.indexOf(a.mood)>=0?100:0)+(g.len===a.len?30:0)+(av.free?10:(av.tag.indexOf('On ')===0?6:0));
     if(g.m[0]===a.mood)sc+=5;
     out.push({c:c,g:g,av:av,sc:sc,ex:g.m.indexOf(a.mood)>=0});
   });
   out.sort(function(x,y){return y.sc-x.sc});
-  return out.slice(0,5);
+  return out.slice(0,20);
 }
 function openMood(pre){
   S.md={step:0,i:0,a:{},res:null};
@@ -738,37 +742,41 @@ function openMood(pre){
   renderMood();$('#mood').classList.add('on');
 }
 function closeMood(){S.md=null;$('#mood').classList.remove('on')}
-function mdOpts(){var s=S.md.step;return s===0?MD_MOODS:s===1?MD_LEN:MD_WHERE}
+function mdOpts(){return S.md.step===0?MD_MOODS:MD_LEN}
 function renderMood(){
   var m=S.md;
   $('#mdopts').style.display='none';$('#mdres').style.display='none';$('#mdhint').textContent='';
-  if(m.step<3){
-    var q=['What are you in the mood for?','How long do you have?','Where should it come from?'][m.step];
+  if(m.step<2){
+    var q=['What are you in the mood for?','How long do you have?'][m.step];
     $('#mdh').textContent=q;
     var pre=[];if(m.a.mood)pre.push(MD_MOODS.filter(function(x){return x.id===m.a.mood})[0].a);if(m.a.len)pre.push(MD_LEN.filter(function(x){return x.id===m.a.len})[0].a);
-    $('#mdsub').textContent=pre.length?pre.join('  ·  '):'Three questions, then tonight\u2019s picks';
+    $('#mdsub').textContent=pre.length?pre.join('  ·  '):'Two questions, then tonight\u2019s picks';
     $('#mdopts').style.display='flex';
     $('#mdopts').innerHTML=mdOpts().map(function(o,n){return '<div class="mo'+(n===m.i?' f':'')+'"><div class="a">'+esc(o.a)+'</div><div class="b">'+esc(o.b)+'</div></div>'}).join('');
     return;
   }
   var r=m.res;
   $('#mdh').textContent=r.length?'Tonight\u2019s picks':'Nothing matches yet';
-  $('#mdsub').textContent=!r.length?'Press Back and loosen one answer':(r.some(function(x){return x.ex})?'Left and right to browse, OK for the trailer and where to watch':'No exact match for that mood. These are the closest');
-  $('#mdres').style.display='flex';
-  $('#mdres').innerHTML=r.map(function(x,n){return '<div class="mr'+(n===m.i?' f':'')+'"><div class="pp"><img src="posters/'+x.c.img+'.jpg"></div><div class="tt">'+esc(x.g.t)+'</div><div class="nt">'+esc(x.g.note)+'</div><div class="av">'+esc(x.av.tag)+'</div></div>'}).join('');
-  $('#mdhint').textContent='Back: change an answer';
+  $('#mdsub').textContent=!r.length?'Press Back and loosen one answer':(r.some(function(x){return x.ex})?'Arrows to browse, OK for the trailer and where to watch':'No exact match for that mood. These are the closest');
+  $('#mdres').style.display='block';
+  $('#mdres').innerHTML='<div id="mdin">'+r.map(function(x,n){return '<div class="mr'+(n===m.i?' f':'')+'"><div class="pp"><img src="posters/'+x.c.img+'.jpg"></div><div class="tt">'+esc(x.g.t)+'</div><div class="nt">'+esc(x.g.note)+'</div><div class="av">'+esc(x.av.tag)+'</div></div>'}).join('')+'</div>';
+  var cd=$('#mdin').children[0];
+  if(cd){var rh=cd.offsetHeight+24;$('#mdin').style.transform='translateY('+(-Math.floor(m.i/5)*rh)+'px)'}
+  $('#mdhint').textContent=r.length>5?'Up and down for more picks. Back: change an answer':'Back: change an answer';
 }
 function moodKey(k){
-  var m=S.md,n=m.step<3?mdOpts().length:m.res.length;
+  var m=S.md,res=m.step>=2,n=res?m.res.length:mdOpts().length;
   if(k==='ArrowRight')m.i=Math.min(n-1,m.i+1);
   if(k==='ArrowLeft')m.i=Math.max(0,m.i-1);
+  if(res&&k==='ArrowDown')m.i=Math.min(n-1,m.i+5);
+  if(res&&k==='ArrowUp')m.i=Math.max(0,m.i-5);
   renderMood();
 }
 function moodPress(){
   var m=S.md;
-  if(m.step<3){
-    var o=mdOpts()[m.i];m.a[['mood','len','where'][m.step]]=o.id;
-    m.step++;m.i=0;if(m.step===3)m.res=mdResults(m.a);
+  if(m.step<2){
+    var o=mdOpts()[m.i];m.a[['mood','len'][m.step]]=o.id;
+    m.step++;m.i=0;if(m.step===2)m.res=mdResults(m.a);
     renderMood();return;
   }
   var x=m.res[m.i];if(x)openFilm(x.c);
@@ -849,7 +857,7 @@ function key(k){
   S.i[S.zone]=Math.max(0,Math.min((L[S.zone]||1)-1,S.i[S.zone]));
   focusHome();
 }
-window.onBack=function(){
+function goBack(){
   if(S.sheet){closeSheet();return}
   if(S.film){if(S.film.big){closeBig()}else closeFilm();return}
   if(S.md){moodBack();return}
@@ -857,8 +865,24 @@ window.onBack=function(){
   if(S.mm){matchBack();return}
   if(S.drawer){closeDrawer();return}
   if(S.zone!=='apps'||S.i.apps){S.zone='apps';S.i.apps=0;focusHome()}
+}
+// The TV calls onBack for the Back button and, on older launcher builds, for the Home button too. Home arrives with a resume right behind it, so a short wait tells them apart.
+var backT=null,backAt=0;
+window.onBack=function(){
+  if(Date.now()-backAt<300)return;
+  clearTimeout(backT);backT=setTimeout(function(){backT=null;goBack()},140);
 };
-window.onResume=function(){loadState();renderHome();applyTheme();if(S.drawer)renderDrawer();if(S.set.on){modeState();renderSettings()}};
+window.onHome=function(){
+  clearTimeout(backT);backT=null;
+  if(S.sheet)closeSheet();
+  if(S.film)closeFilm();
+  if(S.md)closeMood();
+  if(S.mm)closeMatch();
+  if(S.set.on){S.set.screen='main';S.set.i=0;closeSettings()}
+  if(S.drawer)closeDrawer();
+  S.zone='apps';S.i.apps=0;focusHome();
+};
+window.onResume=function(){if(backT){clearTimeout(backT);backT=null;window.onHome();return}loadState();renderHome();applyTheme();if(S.drawer)renderDrawer();if(S.set.on){modeState();renderSettings()}};
 
 var hold=null,held=false;
 addEventListener('keydown',function(e){
@@ -868,7 +892,7 @@ addEventListener('keydown',function(e){
     if(!hold){held=false;hold=setTimeout(function(){held=true;press(true)},600)}
     return;
   }
-  if(k==='Escape'||k==='Backspace'||k==='GoBack'){e.preventDefault();window.onBack();return}
+  if(k==='Escape'||k==='Backspace'||k==='GoBack'){e.preventDefault();backAt=Date.now();goBack();return}
   if(k==='MediaPlayPause'){e.preventDefault();playPause();return}
   if(k==='MediaPlay'){e.preventDefault();playPause('play');return}
   if(k==='MediaPause'){e.preventDefault();playPause('pause');return}
