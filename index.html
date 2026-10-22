@@ -793,6 +793,7 @@ function toast(m){var t=$('#toast');t.textContent=m;t.style.display='block';clea
 function open(pkg,label){
   if(pkg==='app.moviematch'){openMatch();return}
   if(S.installed[pkg]){TV.launch(pkg)}
+  else if(pkg==='com.letterboxd.letterboxd'){TV.web('https://letterboxd.com/jdesoto/watchlist/')}
   else if(pkg==='com.rosetofilms.tvbrowser'){toast('Install the Browser app first')}
   else{toast('Opening the Play Store for '+label);TV.store(pkg)}
 }
