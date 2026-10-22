@@ -729,7 +729,7 @@ function mdResults(a){
     var g=M[h],c=byHash[h];if(!c||seen[mdNorm(g.t)])return;
     var av=mdAvail(watchFor(c),'any');
     if(!av.ok)return;
-    var sc=(g.m.indexOf(a.mood)>=0?100:0)+(g.len===a.len?30:0)+(av.free?10:(av.tag.indexOf('On ')===0?6:0));
+    var sc=(g.m.indexOf(a.mood)>=0?100:0)+(av.free?10:(av.tag.indexOf('On ')===0?6:0));
     if(g.m[0]===a.mood)sc+=5;
     out.push({c:c,g:g,av:av,sc:sc,ex:g.m.indexOf(a.mood)>=0});
   });
@@ -738,18 +738,18 @@ function mdResults(a){
 }
 function openMood(pre){
   S.md={step:0,i:0,a:{},res:null};
-  if(pre){S.md.a.mood=pre;S.md.step=1;S.md.i=1;S.md.from=true}
+  if(pre){S.md.a.mood=pre;S.md.step=1;S.md.i=0;S.md.from=true;S.md.res=mdResults(S.md.a)}
   renderMood();$('#mood').classList.add('on');
 }
 function closeMood(){S.md=null;$('#mood').classList.remove('on')}
-function mdOpts(){return S.md.step===0?MD_MOODS:MD_LEN}
+function mdOpts(){return MD_MOODS}
 function renderMood(){
   var m=S.md;
   $('#mdopts').style.display='none';$('#mdres').style.display='none';$('#mdhint').textContent='';
-  if(m.step<2){
-    var q=['What are you in the mood for?','How long do you have?'][m.step];
+  if(m.step<1){
+    var q='What are you in the mood for?';
     $('#mdh').textContent=q;
-    var pre=[];if(m.a.mood)pre.push(MD_MOODS.filter(function(x){return x.id===m.a.mood})[0].a);if(m.a.len)pre.push(MD_LEN.filter(function(x){return x.id===m.a.len})[0].a);
+    var pre=[];
     $('#mdsub').textContent=pre.length?pre.join('  ·  '):'';
     $('#mdopts').style.display='flex';
     $('#mdopts').innerHTML=mdOpts().map(function(o,n){return '<div class="mo'+(n===m.i?' f':'')+'"><div class="a">'+esc(o.a)+'</div><div class="b">'+esc(o.b)+'</div></div>'}).join('');
@@ -760,12 +760,12 @@ function renderMood(){
   $('#mdsub').textContent=(r.length&&!r.some(function(x){return x.ex}))?'No exact match for that mood. These are the closest':'';
   $('#mdres').style.display='block';
   $('#mdres').innerHTML='<div id="mdin">'+r.map(function(x,n){return '<div class="mr'+(n===m.i?' f':'')+'"><div class="pp"><img src="posters/'+x.c.img+'.jpg"></div><div class="tt">'+esc(x.g.t)+'</div><div class="nt">'+esc(x.g.note)+'</div><div class="av">'+esc(x.av.tag)+'</div></div>'}).join('')+'</div>';
-  var cd=$('#mdin').children[0];
-  if(cd){var rh=cd.offsetHeight+24;$('#mdin').style.transform='translateY('+(-Math.floor(m.i/5)*rh)+'px)'}
+  var kids=$('#mdin').children,top=kids[Math.floor(m.i/5)*5];
+  if(top)$('#mdin').style.transform='translateY('+(-(top.offsetTop-kids[0].offsetTop))+'px)'
   $('#mdhint').textContent='';
 }
 function moodKey(k){
-  var m=S.md,res=m.step>=2,n=res?m.res.length:mdOpts().length;
+  var m=S.md,res=m.step>=1,n=res?m.res.length:mdOpts().length;
   if(k==='ArrowRight')m.i=Math.min(n-1,m.i+1);
   if(k==='ArrowLeft')m.i=Math.max(0,m.i-1);
   if(res&&k==='ArrowDown')m.i=Math.min(n-1,m.i+5);
@@ -774,16 +774,16 @@ function moodKey(k){
 }
 function moodPress(){
   var m=S.md;
-  if(m.step<2){
-    var o=mdOpts()[m.i];m.a[['mood','len'][m.step]]=o.id;
-    m.step++;m.i=0;if(m.step===2)m.res=mdResults(m.a);
+  if(m.step<1){
+    var o=mdOpts()[m.i];m.a.mood=o.id;
+    m.step++;m.i=0;m.res=mdResults(m.a);
     renderMood();return;
   }
   var x=m.res[m.i];if(x)openFilm(x.c);
 }
 function moodBack(){
   var m=S.md;
-  if(m.step===0||(m.step===1&&m.from)){closeMood();return}
+  if(m.step===0||m.from){closeMood();return}
   m.step--;m.i=0;renderMood();
 }
 window.__mdResults=mdResults;
