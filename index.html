@@ -657,7 +657,7 @@ function titleSheet(it){openFilm(it)}
 function watchFor(it){var W=window.__WATCH||{};return W[it.img]||null}
 var APKG={'Netflix':'com.netflix.ninja','Netflix Standard with Ads':'com.netflix.ninja','Amazon Prime Video':'com.amazon.amazonvideo.livingroom','Amazon Prime Video with Ads':'com.amazon.amazonvideo.livingroom','Amazon Video':'com.amazon.amazonvideo.livingroom','Prime Video':'com.amazon.amazonvideo.livingroom','Kanopy':'com.kanopy.tvapp','Plex':'com.plexapp.android','Apple TV':'com.apple.atve.sony.appletv','Apple TV Store':'com.apple.atve.sony.appletv','Max':'com.wbd.stream','HBO Max':'com.wbd.stream','Hulu':'com.hulu.livingroomplus','Disney Plus':'com.disney.disneyplus','Disney+':'com.disney.disneyplus','YouTube':'com.google.android.youtube.tv','MUBI':'com.mubi','Mubi':'com.mubi','Letterboxd':'com.letterboxd.letterboxd','Peacock':'com.peacocktv.peacockandroid','Peacock Premium':'com.peacocktv.peacockandroid','Paramount Plus':'com.cbs.ott','Paramount+':'com.cbs.ott'};
 function openFilm(it){
-  var w=watchFor(it),q=encodeURIComponent(it.t),rows=[];
+  var w=watchFor(it),q=encodeURIComponent(it.t),rows=[],loading=0;
   var KL={free:'',sub:'Stream ',rent:'Rent ',buy:'Buy '};
   if(w&&w.offers&&w.offers.length){
     var of=w.offers,pr=function(o){var m=/\$([0-9.]+)/.exec(o.p);return m?parseFloat(m[1]):99};
@@ -670,9 +670,13 @@ function openFilm(it){
     rent.forEach(function(o){if(/apple tv/i.test(o.n)===false&&pick.indexOf(o)<0)pick.push(o)});
     of.forEach(function(o){if(pick.length<5&&pick.indexOf(o)<0&&(o.k==='rent'||o.k==='free'||(o.k==='sub'&&HAVE.test(o.n))))pick.push(o)});
     pick.slice(0,5).forEach(function(o){rows.push({n:o.n.replace(/^The /,'').replace(/^Amazon Prime Video/,'Prime Video').replace(/ at Home$/,''),p:(KL[o.k]||'')+o.p,u:o.u,free:o.k==='free',pkg:APKG[o.n]})});
-  }else rows.push({n:'Find where to watch',p:'JustWatch',u:'https://www.justwatch.com/us/search?q='+q});
+  }else{
+    window.__JWT=window.__JWT||{};
+    if(!__JWT[it.img]&&typeof TV!=='undefined'&&TV.jwOne){__JWT[it.img]=1;loading=1;try{TV.jwOne(it.img,it.t,+it.y||0)}catch(e){loading=0}}
+    rows.push(loading?{n:'Loading options',p:'',u:''}:{n:'Find where to watch',p:'JustWatch',u:'https://www.justwatch.com/us/search?q='+q});
+  }
   var fr=[];if(w&&w.offers)w.offers.forEach(function(o){if(o.k==='free'&&fr.indexOf(o.n)<0)fr.push(o.n)});
-  S.film={it:it,i:0,rows:rows,tr:(w&&w.trailer)||null};
+  S.film={it:it,i:0,rows:rows,loading:loading,tr:(w&&w.trailer)||null};
   var tr=$('#ftr');
   if(w&&w.trailer){
     tr.style.backgroundImage='url(https://i.ytimg.com/vi/'+w.trailer+'/hqdefault.jpg)';
@@ -711,7 +715,7 @@ function filmKey(k){
 function filmPress(){
   var f=S.film,r=f.rows[f.i];if(f.big){playPause();return}
   if(f.onTr){openBig();return}
-  if(!r)return;
+  if(!r||f.loading)return;
     var o=[];
   if(r.pkg)o.push({l:'Open '+r.n,v:'App on this TV',f:function(){open(r.pkg,r.n)}});
   o.push({l:'Show the page',v:'In the browser',f:function(){TV.web(r.u)}});
@@ -1095,7 +1099,7 @@ function jwStart(){
     TV.jwSync(JSON.stringify(a));
   }catch(e){}
 }
-window.onJw=function(){mergeJw();if(S.lb)renderLb();renderHome()};
+window.onJw=function(){mergeJw();if(S.film&&S.film.loading&&!S.film.big){var m=S.film.it;try{if(S.film.pl)S.film.pl.destroy()}catch(e){}S.film=null;openFilm(m)}if(S.lb)renderLb();renderHome()};
 var shuffledAt=0;
 function reshuffle(){ // Tonight: 30 fresh picks from the whole watchlist, avoiding what the last launches showed
   var pool=DATA.pool||[];if(pool.length<30)return;
