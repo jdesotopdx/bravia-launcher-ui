@@ -186,6 +186,18 @@ html[data-theme=honey] #sky::after{content:'';position:absolute;inset:0;backgrou
 .mr .nt{margin-top:6px;font-size:22px;line-height:1.3;color:var(--dim)}
 .mr .av{margin-top:8px;font-size:22px;font-weight:600;color:var(--accent)}
 #mdhint{left:96px;top:980px;font-size:24px;color:var(--dim)}
+#lbh{left:96px;top:64px;font-size:54px;font-weight:600}
+#lbt{left:96px;top:160px;display:flex;gap:16px}
+.lt{padding:14px 34px;border-radius:999px;background:var(--chip);color:var(--ink);font-size:28px;font-weight:600}
+.lt.on{background:var(--focusbg);color:var(--focusfg)}
+.lt.f{background:var(--focusbg);color:var(--focusfg);box-shadow:0 0 0 4px rgba(var(--ring),.9),0 0 36px rgba(var(--glow),.8)}
+#lbres{left:72px;top:244px;width:1776px;height:716px;overflow:hidden}
+#lbin{display:grid;grid-template-columns:repeat(6,1fr);gap:24px;padding:20px 24px 0;transition:transform .25s ease}
+.lc{min-width:0}
+.lc .pp{width:100%;height:auto;aspect-ratio:2/3;border-radius:20px}
+.lc.f .pp{transform:scale(1.04);box-shadow:0 0 0 4px rgba(var(--ring),.95),0 0 40px rgba(var(--glow),.85)}
+.lc .tt{margin-top:14px;font-size:26px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lc .nt{margin-top:4px;font-size:22px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #fof{left:96px;top:808px;width:1728px;display:flex;gap:16px}
 .frow{flex:1;min-width:0;height:152px;border-radius:24px;padding:0 28px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:10px;background:var(--chip);color:var(--ink);font-size:32px;font-weight:600}
 .frow .n{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -232,6 +244,7 @@ html[data-theme=honey] #sky::after{content:'';position:absolute;inset:0;backgrou
   <div id="res" class="abs"></div><div id="rhint" class="abs"></div>
  </div>
  <div id="mood" class="ov"><div id="mdh" class="abs"></div><div id="mdsub" class="abs"></div><div id="mdopts" class="abs"></div><div id="mdres" class="abs"></div><div id="mdhint" class="abs"></div></div>
+ <div id="lb" class="ov"><div id="lbh" class="abs"></div><div id="lbt" class="abs"></div><div id="lbres" class="abs"></div></div>
  <div id="film" class="ov"><div id="ftr" class="abs"></div><div id="finfo" class="abs"></div><div id="fof" class="abs"></div></div>
  <div id="sheet"><div id="sbox"><h3 id="sh"></h3><div id="sopts"></div></div></div>
  <div id="toast"></div>
@@ -788,12 +801,46 @@ function moodBack(){
 }
 window.__mdResults=mdResults;
 
+// ---------- Letterboxd watchlist ----------
+var LB_TABS=['Watchlist','Free now','Shuffle'];
+function lbList(t){
+  var a=(DATA.pool||[]).slice();
+  if(t===1)a=a.filter(function(c){return mdAvail(watchFor(c),'free').free});
+  if(t===2)for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),x=a[i];a[i]=a[j];a[j]=x}
+  return a;
+}
+function openLb(){S.lb={t:0,i:0,tabs:false,list:lbList(0)};renderLb();$('#lb').classList.add('on')}
+function closeLb(){S.lb=null;$('#lb').classList.remove('on')}
+function renderLb(){
+  var l=S.lb,L=l.list;
+  $('#lbh').textContent='Letterboxd watchlist  ·  '+L.length+' films';
+  $('#lbt').innerHTML=LB_TABS.map(function(n,k){return '<div class="lt'+(k===l.t?' on':'')+(l.tabs&&k===l.t?' f':'')+'">'+n+'</div>'}).join('');
+  $('#lbres').innerHTML=L.length?'<div id="lbin">'+L.map(function(c,n){var av=mdAvail(watchFor(c),'any').tag.replace(/ and .*/,'');return '<div class="lc'+(!l.tabs&&n===l.i?' f':'')+'"><div class="pp"><img src="posters/'+c.img+'.jpg"></div><div class="tt">'+esc(c.t)+'</div><div class="nt">'+esc(c.y+(av?'  ·  '+av:''))+'</div></div>'}).join('')+'</div>':'';
+  var kids=$('#lbin')?$('#lbin').children:[],top=kids[Math.floor(l.i/6)*6];
+  if(top)$('#lbin').style.transform='translateY('+(-(top.offsetTop-kids[0].offsetTop))+'px)'
+}
+function lbKey(k){
+  var l=S.lb,n=l.list.length;
+  if(l.tabs){
+    if(k==='ArrowRight'&&l.t<LB_TABS.length-1){l.t++;l.i=0;l.list=lbList(l.t)}
+    if(k==='ArrowLeft'&&l.t>0){l.t--;l.i=0;l.list=lbList(l.t)}
+    if(k==='ArrowDown'&&n)l.tabs=false;
+  }else{
+    if(k==='ArrowRight')l.i=Math.min(n-1,l.i+1);
+    if(k==='ArrowLeft')l.i=Math.max(0,l.i-1);
+    if(k==='ArrowDown')l.i=Math.min(n-1,l.i+6);
+    if(k==='ArrowUp'){if(l.i<6)l.tabs=true;else l.i-=6}
+  }
+  renderLb();
+}
+function lbPress(){var l=S.lb;if(l.tabs){if(l.list.length)l.tabs=false;renderLb();return}var c=l.list[l.i];if(c)openFilm(c)}
+
 // ---------- actions ----------
 function toast(m){var t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(function(){t.style.display='none'},2400)}
 function open(pkg,label){
   if(pkg==='app.moviematch'){openMatch();return}
-  if(S.installed[pkg]){TV.launch(pkg)}
-  else if(pkg==='com.letterboxd.letterboxd'){TV.web('https://letterboxd.com/jdesoto/watchlist/')}
+  if(pkg==='com.letterboxd.letterboxd'){openLb()}
+  else if(S.installed[pkg]){TV.launch(pkg)}
   else if(pkg==='com.rosetofilms.tvbrowser'){toast('Install the Browser app first')}
   else{toast('Opening the Play Store for '+label);TV.store(pkg)}
 }
@@ -801,6 +848,7 @@ function savePins(){jset('pins',S.pins)}
 function press(long){
   if(S.sheet){var o=S.sheet.o[S.sheetI];closeSheet();if(o&&o.f)o.f();return}
   if(S.film){filmPress();return}
+  if(S.lb){lbPress();return}
   if(S.md){moodPress();return}
   if(S.set.on){settingsPress();return}
   if(S.mm){matchPress();return}
@@ -844,6 +892,7 @@ function press(long){
 function key(k){
   if(S.sheet)return sheetKey(k);
   if(S.film)return filmKey(k);
+  if(S.lb)return lbKey(k);
   if(S.md)return moodKey(k);
   if(S.set.on)return settingsKey(k);
   if(S.mm)return matchKey(k);
@@ -861,6 +910,7 @@ function key(k){
 function goBack(){
   if(S.sheet){closeSheet();return}
   if(S.film){if(S.film.big){closeBig()}else closeFilm();return}
+  if(S.lb){closeLb();return}
   if(S.md){moodBack();return}
   if(S.set.on){if(S.set.screen!=='main'){S.set.screen='main';S.set.i=0;renderSettings()}else closeSettings();return}
   if(S.mm){matchBack();return}
@@ -877,6 +927,7 @@ window.onHome=function(){
   clearTimeout(backT);backT=null;
   if(S.sheet)closeSheet();
   if(S.film)closeFilm();
+  if(S.lb)closeLb();
   if(S.md)closeMood();
   if(S.mm)closeMatch();
   if(S.set.on){S.set.screen='main';S.set.i=0;closeSettings()}

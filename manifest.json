@@ -1,5 +1,5 @@
 {
- "v": 90,
+ "v": 92,
  "files": [
   "index.html",
   "watch.js",
@@ -292,7 +292,7 @@
   "posters/fff3ea2b4df7987e29776b3644b0e061.jpg"
  ],
  "apk": {
-  "v": 90,
+  "v": 92,
   "url": "https://raw.githubusercontent.com/jdesotopdx/bravia-launcher-ui/main/home.apk"
  }
 }
