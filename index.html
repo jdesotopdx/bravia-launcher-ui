@@ -883,7 +883,7 @@ window.onHome=function(){
   if(S.drawer)closeDrawer();
   S.zone='apps';S.i.apps=0;focusHome();
 };
-window.onResume=function(){if(backT){clearTimeout(backT);backT=null;window.onHome();return}loadState();renderHome();applyTheme();if(S.drawer)renderDrawer();if(S.set.on){modeState();renderSettings()}};
+window.onResume=function(){if(backT){clearTimeout(backT);backT=null;window.onHome();return}if(Date.now()-shuffledAt>10*60*1000){reshuffle();S.i.picks=0}loadState();renderHome();applyTheme();if(S.drawer)renderDrawer();if(S.set.on){modeState();renderSettings()}};
 
 var hold=null,held=false;
 addEventListener('keydown',function(e){
@@ -908,7 +908,17 @@ addEventListener('keyup',function(e){
 },true);
 
 // ---------- boot ----------
-Promise.resolve().then(function(){if(window.__DATA){var D=window.__DATA;Object.keys(D).forEach(function(k){DATA[k]=D[k]})}}).then(function(){
+var shuffledAt=0;
+function reshuffle(){ // Tonight: 30 fresh picks from the whole watchlist, avoiding what the last launches showed
+  var pool=DATA.pool||[];if(pool.length<30)return;
+  var seen=[];try{seen=JSON.parse(localStorage.getItem('shown')||'[]')}catch(e){}
+  var fresh=pool.filter(function(c){return seen.indexOf(c.img)<0});
+  if(fresh.length<30){fresh=pool.slice();seen=[]}
+  for(var i=fresh.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=fresh[i];fresh[i]=fresh[j];fresh[j]=t}
+  DATA.tonight=fresh.slice(0,30);shuffledAt=Date.now();
+  try{localStorage.setItem('shown',JSON.stringify(seen.concat(DATA.tonight.map(function(c){return c.img})).slice(-150)))}catch(e){}
+}
+Promise.resolve().then(function(){if(window.__DATA){var D=window.__DATA;Object.keys(D).forEach(function(k){DATA[k]=D[k]})}reshuffle()}).then(function(){
   applyTheme();loadState();renderHome();tick();weather();setInterval(tick,15000);setInterval(weather,1800000);
 });
 window.__S=S;window.__key=key;window.__press=press;window.__open=open;window.__theme=function(t){TV.set('theme',t);applyTheme()};
