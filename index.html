@@ -779,14 +779,24 @@ function filmKey(k){
   if(k==='ArrowLeft')f.i=Math.max(0,f.i-1);
   renderFilm();
 }
+// Each service's own link format for opening a film's page inside its TV app.
+function deepLink(u,pkg){
+  var m,q=function(k){var x=new RegExp('[?&]'+k+'=([^&#]+)').exec(u);return x?decodeURIComponent(x[1]):''};
+  var it=function(path,extra){return 'intent://'+path+'#Intent;scheme=https;package='+pkg+';action=android.intent.action.VIEW;'+(extra||'')+'end'};
+  if(/netflix/.test(pkg)&&(m=/netflix\.com\/(?:[a-z-]+\/)?(?:title|watch)\/(\d+)/.exec(u)))return it('www.netflix.com/title/'+m[1],'S.source=30;');
+  if(/amazonvideo/.test(pkg)){var g=q('gti');if(g)return it('app.primevideo.com/detail?gti='+encodeURIComponent(g));if(m=/\/(?:dp|detail|gp\/video\/detail)\/([A-Z0-9]{10})/.exec(u))return it('app.primevideo.com/detail?asin='+m[1])}
+  if(/appletv/.test(pkg)&&(m=/tv\.apple\.com\/([^?#]+)/.exec(u)))return it('tv.apple.com/'+m[1]);
+  if(m=/^https?:\/\/([^?#]+)/.exec(u))return it(m[1]);
+  return '';
+}
 function filmPress(){
   var f=S.film,r=f.rows[f.i];if(f.big){playPause();return}
   if(f.onTr){openBig();return}
   if(!r||(!r.u&&!r.pkg))return;
   // Straight into the service's app, on the film's page when the app accepts the link, else the app's home.
   if(r.pkg){
-    var m=/^https?:\/\/(.+)$/.exec(r.u||'');
-    try{if(m&&TV.launchUri){TV.launchUri('intent://'+m[1]+'#Intent;scheme=https;package='+r.pkg+';end',r.pkg);return}}catch(e){}
+    var d=deepLink(r.u||'',r.pkg);
+    try{if(d&&TV.launchUri){TV.launchUri(d,r.pkg);return}}catch(e){}
     open(r.pkg,r.n);return;
   }
   if(r.u)TV.web(r.u);
@@ -1147,7 +1157,7 @@ window.onHome=function(){askUpdates();
   if(S.drawer)closeDrawer();
   if(!S.zone)S.zone='apps';focusHome();
 };
-window.onResume=function(){askUpdates();if(backT){clearTimeout(backT);backT=null;window.onHome();return}if(Date.now()-shuffledAt>10*60*1000){reshuffle();S.i.picks=0}loadState();renderHome();applyTheme();if(S.drawer)renderDrawer();if(S.set.on){modeState();renderSettings()}};
+window.onResume=function(){askUpdates();if(backT){clearTimeout(backT);backT=null;window.onHome();return}if(beatGap()>180000){keepOrShuffle();S.i.picks=0}loadState();renderHome();applyTheme();if(S.drawer)renderDrawer();if(S.set.on){modeState();renderSettings()}};
 
 var hold=null,held=false;
 addEventListener('keydown',function(e){
@@ -1189,6 +1199,14 @@ function jwStart(){
 }
 window.onJw=function(){mergeJw();if(S.lb)renderLb();renderHome()};
 var shuffledAt=0;
+// Tonight changes only when the TV has been off: the launcher keeps a heartbeat, and a gap of over 3 minutes means the TV slept.
+function beatGap(){var b=0;try{b=+localStorage.getItem('beat')||0}catch(e){}return Date.now()-b}
+function beat(){try{localStorage.setItem('beat',String(Date.now()))}catch(e){}}
+function keepOrShuffle(){
+  var keep=null;try{keep=JSON.parse(localStorage.getItem('tonight')||'null')}catch(e){}
+  if(keep&&beatGap()<180000){var by={};(DATA.pool||[]).forEach(function(c){by[c.img]=c});var a=keep.map(function(h){return by[h]}).filter(Boolean);if(a.length>=20){DATA.tonight=a;beat();return false}}
+  reshuffle();beat();return true;
+}
 function reshuffle(){ // Tonight: 30 fresh picks from the whole watchlist, avoiding what the last launches showed
   var pool=DATA.pool||[];if(pool.length<30)return;
   var seen=[];try{seen=JSON.parse(localStorage.getItem('shown')||'[]')}catch(e){}
@@ -1196,10 +1214,11 @@ function reshuffle(){ // Tonight: 30 fresh picks from the whole watchlist, avoid
   if(fresh.length<30){fresh=pool.slice();seen=[]}
   for(var i=fresh.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=fresh[i];fresh[i]=fresh[j];fresh[j]=t}
   DATA.tonight=fresh.slice(0,30);shuffledAt=Date.now();
+  try{localStorage.setItem('tonight',JSON.stringify(DATA.tonight.map(function(c){return c.img})))}catch(e){}
   try{localStorage.setItem('shown',JSON.stringify(seen.concat(DATA.tonight.map(function(c){return c.img})).slice(-150)))}catch(e){}
 }
-Promise.resolve().then(function(){if(window.__DATA){var D=window.__DATA;Object.keys(D).forEach(function(k){DATA[k]=D[k]})}reshuffle();mergeJw();jwStart()}).then(function(){
-  applyTheme();loadState();renderHome();tick();weather();setInterval(tick,15000);screensNow(function(h){bootHtml=h});setInterval(askUpdates,30*60*1000);setInterval(weather,1800000);
+Promise.resolve().then(function(){if(window.__DATA){var D=window.__DATA;Object.keys(D).forEach(function(k){DATA[k]=D[k]})}keepOrShuffle();mergeJw();jwStart()}).then(function(){
+  applyTheme();loadState();renderHome();tick();weather();setInterval(tick,15000);setInterval(function(){if(beatGap()>180000&&idleHome()){keepOrShuffle();S.i.picks=0;renderHome()}else beat()},20000);screensNow(function(h){bootHtml=h});setInterval(askUpdates,30*60*1000);setInterval(weather,1800000);
 });
 window.__S=S;window.__key=key;window.__press=press;window.__open=open;window.__openFilm=openFilm;window.__theme=function(t){TV.set('theme',t);applyTheme()};
 })();
