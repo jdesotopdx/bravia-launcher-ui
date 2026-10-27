@@ -1075,7 +1075,16 @@ window.onBack=function(){
   if(Date.now()-backAt<300)return;
   clearTimeout(backT);backT=setTimeout(function(){backT=null;goBack()},140);
 };
-window.onHome=function(){
+// Screen updates: ask for them on every Home press or return, then swap in the new screens as soon as they land.
+var bootHtml=null,lastAsk=0;
+function screensNow(cb){try{var x=new XMLHttpRequest();x.open('GET','index.html?t='+Date.now());x.onload=function(){cb(x.responseText||'')};x.send()}catch(e){}}
+function idleHome(){return !S.film&&!S.lb&&!S.md&&!S.mm&&!S.sheet&&!S.drawer&&!(S.set&&S.set.on)}
+function askUpdates(){
+  if(Date.now()-lastAsk<60000)return;lastAsk=Date.now();
+  try{TV.checkUpdates()}catch(e){return}
+  [15000,40000,90000].forEach(function(ms){setTimeout(function(){screensNow(function(h){if(bootHtml&&h&&h!==bootHtml&&idleHome())location.reload()})},ms)});
+}
+window.onHome=function(){askUpdates();
   clearTimeout(backT);backT=null;
   if(S.sheet)closeSheet();
   if(S.film)closeFilm();
@@ -1086,7 +1095,7 @@ window.onHome=function(){
   if(S.drawer)closeDrawer();
   S.zone='apps';S.i.apps=0;focusHome();
 };
-window.onResume=function(){if(backT){clearTimeout(backT);backT=null;window.onHome();return}if(Date.now()-shuffledAt>10*60*1000){reshuffle();S.i.picks=0}loadState();renderHome();applyTheme();if(S.drawer)renderDrawer();if(S.set.on){modeState();renderSettings()}};
+window.onResume=function(){askUpdates();if(backT){clearTimeout(backT);backT=null;window.onHome();return}if(Date.now()-shuffledAt>10*60*1000){reshuffle();S.i.picks=0}loadState();renderHome();applyTheme();if(S.drawer)renderDrawer();if(S.set.on){modeState();renderSettings()}};
 
 var hold=null,held=false;
 addEventListener('keydown',function(e){
@@ -1138,7 +1147,7 @@ function reshuffle(){ // Tonight: 30 fresh picks from the whole watchlist, avoid
   try{localStorage.setItem('shown',JSON.stringify(seen.concat(DATA.tonight.map(function(c){return c.img})).slice(-150)))}catch(e){}
 }
 Promise.resolve().then(function(){if(window.__DATA){var D=window.__DATA;Object.keys(D).forEach(function(k){DATA[k]=D[k]})}reshuffle();mergeJw();jwStart()}).then(function(){
-  applyTheme();loadState();renderHome();tick();weather();setInterval(tick,15000);setInterval(weather,1800000);
+  applyTheme();loadState();renderHome();tick();weather();setInterval(tick,15000);screensNow(function(h){bootHtml=h});setInterval(askUpdates,30*60*1000);setInterval(weather,1800000);
 });
 window.__S=S;window.__key=key;window.__press=press;window.__open=open;window.__openFilm=openFilm;window.__theme=function(t){TV.set('theme',t);applyTheme()};
 })();
