@@ -679,22 +679,21 @@ function openFilm(it){
   }else{
     window.__JWT=window.__JWT||{};
     if(!__JWT[it.img]&&typeof TV!=='undefined'&&TV.jwOne){__JWT[it.img]=1;loading=1;try{TV.jwOne(it.img,it.t,+it.y||0)}catch(e){loading=0}}
-    rows.push(loading?{n:'Loading options',p:'',u:''}:{n:'Find where to watch',p:'JustWatch',u:'https://www.justwatch.com/us/search?q='+q});
+    if(loading)rows.push({n:'Loading options',p:'',u:''});
   }
-  if(!rows.length)rows.push({n:'Find where to watch',p:'JustWatch',u:'https://www.justwatch.com/us/search?q='+q});
   var fr=[];if(w&&w.offers)w.offers.forEach(function(o){if(o.k==='free'&&fr.indexOf(o.n)<0)fr.push(o.n)});
   S.film={it:it,i:0,rows:rows,loading:loading,tr:(w&&w.trailer)||null};
   var tr=$('#ftr');tr.innerHTML='';
   tr.style.backgroundImage='url(posters/'+it.img+'.jpg)';tr.style.backgroundSize='auto 100%';
-  if(S.film.tr)playTrailer(S.film.tr);
-  else ytFind(it,function(tid){if(S.film&&S.film.it===it&&!S.film.tr){S.film.tr=tid;playTrailer(tid)}});
+  if(S.film.tr){playTrailer(S.film.tr);if(!rows.length)S.film.onTr=true}
+  else ytFind(it,function(tid){if(S.film&&S.film.it===it&&!S.film.tr){S.film.tr=tid;playTrailer(tid);if(!S.film.rows.length){S.film.onTr=true;renderFilm()}}});
   var D=(LBd().f||{})[it.img]||null;
   $('#finfo').innerHTML='<h1>'+esc(it.t)+'</h1><div class="y">'+esc([it.y||'',D&&D.n?D.n+' min':'',D&&D.d&&D.d.length?D.d.join(', '):''].filter(Boolean).join('  \u00b7  '))+'</div>'
     +(D&&(D.r||(D.g&&D.g.length))?'<div class="rt">'+(D.r?'<b>\u2605 '+D.r.toFixed(1)+'</b>':'')+(D.g&&D.g.length?'<span>'+esc(D.g.join(', '))+'</span>':'')+'</div>':'')
     +(D&&D.tg?'<div class="tgl">'+esc(D.tg)+'</div>':'')
     +(D&&D.s?'<div class="sy">'+esc(D.s)+'</div>':'')
     +(D&&D.c&&D.c.length?'<div class="cs">'+esc(D.c.slice(0,5).join(', '))+'</div>':'')
-    +'<div class="fr">'+(fr.length?'Free: '+esc(fr.join(', ')):(w?'No free option right now':''))+'</div>';
+    +'<div class="fr">'+(!rows.length?'Not streaming right now':fr.length?'Free: '+esc(fr.join(', ')):(w?'No free option right now':''))+'</div>';
   renderFilm();$('#film').classList.add('on');
 }
 function playTrailer(tid){
@@ -723,8 +722,9 @@ function closeFilm(){closeBig();try{if(S.film&&S.film.pl)S.film.pl.destroy()}cat
 function filmKey(k){
   var f=S.film,n=f.rows.length;
   if(f.big){if(k==='ArrowDown'||k==='ArrowUp')closeBig();return}
-  if(f.onTr){if(k==='ArrowDown'){f.onTr=false;renderFilm()}return}
+  if(f.onTr){if(k==='ArrowDown'&&n){f.onTr=false;renderFilm()}return}
   if(k==='ArrowUp'){if(f.tr){f.onTr=true;renderFilm()}return}
+  if(!n)return;
   if(k==='ArrowRight')f.i=Math.min(n-1,f.i+1);
   if(k==='ArrowLeft')f.i=Math.max(0,f.i-1);
   renderFilm();
