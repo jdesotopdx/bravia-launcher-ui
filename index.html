@@ -694,7 +694,7 @@ function jwLookup(it,cb){
     cb(out);
   }
 }
-var APKG={'Netflix':'com.netflix.ninja','Netflix Standard with Ads':'com.netflix.ninja','Amazon Prime Video':'com.amazon.amazonvideo.livingroom','Amazon Prime Video with Ads':'com.amazon.amazonvideo.livingroom','Amazon Video':'com.amazon.amazonvideo.livingroom','Prime Video':'com.amazon.amazonvideo.livingroom','Kanopy':'com.kanopy.tvapp','Plex':'com.plexapp.android','Apple TV':'com.apple.atve.sony.appletv','Apple TV Store':'com.apple.atve.sony.appletv','Max':'com.wbd.stream','HBO Max':'com.wbd.stream','Hulu':'com.hulu.livingroomplus','Disney Plus':'com.disney.disneyplus','Disney+':'com.disney.disneyplus','YouTube':'com.google.android.youtube.tv','MUBI':'com.mubi','Mubi':'com.mubi','Letterboxd':'com.letterboxd.letterboxd','Peacock':'com.peacocktv.peacockandroid','Peacock Premium':'com.peacocktv.peacockandroid','Paramount Plus':'com.cbs.ott','Paramount+':'com.cbs.ott'};
+var APKG={'Netflix':'com.netflix.ninja','Netflix Standard with Ads':'com.netflix.ninja','Amazon Prime Video':'com.amazon.amazonvideo.livingroom','Amazon Prime Video with Ads':'com.amazon.amazonvideo.livingroom','Amazon Video':'com.amazon.amazonvideo.livingroom','Prime Video':'com.amazon.amazonvideo.livingroom','Kanopy':'com.kanopy.tvapp','Hoopla':'com.hoopladigital.android','hoopla':'com.hoopladigital.android','Plex':'com.plexapp.android','Apple TV':'com.apple.atve.sony.appletv','Apple TV Store':'com.apple.atve.sony.appletv','Max':'com.wbd.stream','HBO Max':'com.wbd.stream','Hulu':'com.hulu.livingroomplus','Disney Plus':'com.disney.disneyplus','Disney+':'com.disney.disneyplus','YouTube':'com.google.android.youtube.tv','MUBI':'com.mubi','Mubi':'com.mubi','Letterboxd':'com.letterboxd.letterboxd','Peacock':'com.peacocktv.peacockandroid','Peacock Premium':'com.peacocktv.peacockandroid','Paramount Plus':'com.cbs.ott','Paramount+':'com.cbs.ott'};
 function filmRows(w){
   var rows=[];
   var KL={free:'',sub:'Stream ',rent:'Rent ',buy:'Buy '};
@@ -783,11 +783,13 @@ function filmPress(){
   var f=S.film,r=f.rows[f.i];if(f.big){playPause();return}
   if(f.onTr){openBig();return}
   if(!r||(!r.u&&!r.pkg))return;
-    var o=[];
-  if(r.pkg)o.push({l:'Open '+r.n,v:'App on this TV',f:function(){open(r.pkg,r.n)}});
-  o.push({l:'Show the page',v:'In the browser',f:function(){TV.web(r.u)}});
-  o.push({l:'Cancel',f:function(){}});
-  openSheet(r.n+'  '+r.p,o);
+  // Straight into the service's app, on the film's page when the app accepts the link, else the app's home.
+  if(r.pkg){
+    var m=/^https?:\/\/(.+)$/.exec(r.u||'');
+    try{if(m&&TV.launchUri){TV.launchUri('intent://'+m[1]+'#Intent;scheme=https;package='+r.pkg+';end',r.pkg);return}}catch(e){}
+    open(r.pkg,r.n);return;
+  }
+  if(r.u)TV.web(r.u);
 }
 function openBig(){S.film.big=true;$('#ftr').classList.add('big')}
 function closeBig(){if(S.film)S.film.big=null;$('#ftr').classList.remove('big')}
