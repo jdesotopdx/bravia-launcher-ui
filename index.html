@@ -662,7 +662,11 @@ function openFilm(it){
   var w=watchFor(it),q=encodeURIComponent(it.t),rows=[],loading=0;
   var KL={free:'',sub:'Stream ',rent:'Rent ',buy:'Buy '};
   if(w&&w.offers&&w.offers.length){
-    var of=w.offers,pr=function(o){var m=/\$([0-9.]+)/.exec(o.p);return m?parseFloat(m[1]):99};
+    // House rules: no Fandango, no ad tiers, rentals only from Apple TV and Amazon, one row per service.
+    var seen={},of=w.offers.filter(function(o){
+      if(/fandango|vudu|with ads|flixfling|redbox|microsoft|plex|tubi|roku/i.test(o.n))return false;
+      if((o.k==='rent'||o.k==='buy')&&!/apple tv|amazon/i.test(o.n))return false;
+      var key=o.n.toLowerCase().replace(/ (standard|basic|premium).*$/,'')+'|'+o.k;if(seen[key])return false;seen[key]=1;return true}),pr=function(o){var m=/\$([0-9.]+)/.exec(o.p);return m?parseFloat(m[1]):99};
     var free=of.filter(function(o){return o.k==='free'}).sort(function(a,b){return (/kanopy|hoopla/i.test(b.n)?1:0)-(/kanopy|hoopla/i.test(a.n)?1:0)}).slice(0,3);
     var HAVE=/^(netflix|amazon prime video|prime video|max|hbo max|hulu|disney|mubi|criterion|peacock|paramount)/i;
     var sub=of.filter(function(o){return o.k==='sub'&&HAVE.test(o.n)}).slice(0,1);
@@ -677,21 +681,14 @@ function openFilm(it){
     if(!__JWT[it.img]&&typeof TV!=='undefined'&&TV.jwOne){__JWT[it.img]=1;loading=1;try{TV.jwOne(it.img,it.t,+it.y||0)}catch(e){loading=0}}
     rows.push(loading?{n:'Loading options',p:'',u:''}:{n:'Find where to watch',p:'JustWatch',u:'https://www.justwatch.com/us/search?q='+q});
   }
+  if(!rows.length)rows.push({n:'Find where to watch',p:'JustWatch',u:'https://www.justwatch.com/us/search?q='+q});
   var fr=[];if(w&&w.offers)w.offers.forEach(function(o){if(o.k==='free'&&fr.indexOf(o.n)<0)fr.push(o.n)});
   S.film={it:it,i:0,rows:rows,loading:loading,tr:(w&&w.trailer)||null};
-  var tr=$('#ftr');
-  if(w&&w.trailer){
-    tr.style.backgroundImage='url(https://i.ytimg.com/vi/'+w.trailer+'/hqdefault.jpg)';
-    var tid=w.trailer;tr.innerHTML='<div id="ytp"></div>';
-    ytReady(function(){
-      if(!S.film||S.film.tr!==tid||!$('#ytp'))return;
-      var pv={autoplay:1,controls:0,rel:0,modestbranding:1,playsinline:1,loop:1,playlist:tid};
-      if(/^https/.test(location.origin))pv.origin=location.origin;
-      S.film.pl=new YT.Player('ytp',{width:960,height:540,videoId:tid,playerVars:pv,events:{onReady:function(e){try{e.target.unMute();e.target.setVolume(100);e.target.playVideo()}catch(x){}}}});
-    });
-  }else{tr.style.backgroundImage='';tr.innerHTML=''}
+  var tr=$('#ftr');tr.innerHTML='';
+  tr.style.backgroundImage='url(posters/'+it.img+'.jpg)';tr.style.backgroundSize='auto 100%';
+  if(S.film.tr)playTrailer(S.film.tr);
+  else ytFind(it,function(tid){if(S.film&&S.film.it===it&&!S.film.tr){S.film.tr=tid;playTrailer(tid)}});
   var D=(LBd().f||{})[it.img]||null;
-  if(!(w&&w.trailer)){tr.style.backgroundImage='url(posters/'+it.img+'.jpg)';tr.style.backgroundSize='auto 100%'}else tr.style.backgroundSize='';
   $('#finfo').innerHTML='<h1>'+esc(it.t)+'</h1><div class="y">'+esc([it.y||'',D&&D.n?D.n+' min':'',D&&D.d&&D.d.length?D.d.join(', '):''].filter(Boolean).join('  \u00b7  '))+'</div>'
     +(D&&(D.r||(D.g&&D.g.length))?'<div class="rt">'+(D.r?'<b>\u2605 '+D.r.toFixed(1)+'</b>':'')+(D.g&&D.g.length?'<span>'+esc(D.g.join(', '))+'</span>':'')+'</div>':'')
     +(D&&D.tg?'<div class="tgl">'+esc(D.tg)+'</div>':'')
@@ -699,6 +696,24 @@ function openFilm(it){
     +(D&&D.c&&D.c.length?'<div class="cs">'+esc(D.c.slice(0,5).join(', '))+'</div>':'')
     +'<div class="fr">'+(fr.length?'Free: '+esc(fr.join(', ')):(w?'No free option right now':''))+'</div>';
   renderFilm();$('#film').classList.add('on');
+}
+function playTrailer(tid){
+  var tr=$('#ftr');tr.style.backgroundImage='url(https://i.ytimg.com/vi/'+tid+'/hqdefault.jpg)';tr.style.backgroundSize='';tr.innerHTML='<div id="ytp"></div>';
+  ytReady(function(){
+    if(!S.film||S.film.tr!==tid||!$('#ytp'))return;
+    var pv={autoplay:1,controls:0,rel:0,modestbranding:1,playsinline:1,loop:1,playlist:tid};
+    if(/^https/.test(location.origin))pv.origin=location.origin;
+    S.film.pl=new YT.Player('ytp',{width:960,height:540,videoId:tid,playerVars:pv,events:{onReady:function(e){try{e.target.unMute();e.target.setVolume(100);e.target.playVideo()}catch(x){}}}});
+  });
+}
+// Trailer lookup for any film: first YouTube result for "<title> <year> official trailer", remembered on the TV.
+var HTTPCB={};window.onHttp=function(id,st,t){var f=HTTPCB[id];delete HTTPCB[id];if(f)f(st,t)};
+function ytFind(it,cb){
+  var k='yt:'+it.img;try{var c=localStorage.getItem(k);if(c){cb(c);return}}catch(e){}
+  if(typeof TV==='undefined'||!TV.http)return;
+  var id='yt'+Date.now();
+  HTTPCB[id]=function(st,t){var m=/"videoRenderer":\{"videoId":"([\w-]{11})"/.exec(t||'');if(m){try{localStorage.setItem(k,m[1])}catch(e){}cb(m[1])}};
+  try{TV.http(id,'https://www.youtube.com/results?search_query='+encodeURIComponent(it.t+' '+(it.y||'')+' official trailer'),'GET','','{"Accept-Language":"en-US,en"}')}catch(e){}
 }
 function renderFilm(){
   $('#ftr').classList.toggle('f',!!S.film.onTr);
@@ -1125,6 +1140,6 @@ function reshuffle(){ // Tonight: 30 fresh picks from the whole watchlist, avoid
 Promise.resolve().then(function(){if(window.__DATA){var D=window.__DATA;Object.keys(D).forEach(function(k){DATA[k]=D[k]})}reshuffle();mergeJw();jwStart()}).then(function(){
   applyTheme();loadState();renderHome();tick();weather();setInterval(tick,15000);setInterval(weather,1800000);
 });
-window.__S=S;window.__key=key;window.__press=press;window.__open=open;window.__theme=function(t){TV.set('theme',t);applyTheme()};
+window.__S=S;window.__key=key;window.__press=press;window.__open=open;window.__openFilm=openFilm;window.__theme=function(t){TV.set('theme',t);applyTheme()};
 })();
 </script></body></html>
