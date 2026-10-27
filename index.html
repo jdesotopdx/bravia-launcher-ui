@@ -1093,7 +1093,7 @@ window.onHome=function(){askUpdates();
   if(S.mm)closeMatch();
   if(S.set.on){S.set.screen='main';S.set.i=0;closeSettings()}
   if(S.drawer)closeDrawer();
-  S.zone='apps';S.i.apps=0;focusHome();
+  if(!S.zone)S.zone='apps';focusHome();
 };
 window.onResume=function(){askUpdates();if(backT){clearTimeout(backT);backT=null;window.onHome();return}if(Date.now()-shuffledAt>10*60*1000){reshuffle();S.i.picks=0}loadState();renderHome();applyTheme();if(S.drawer)renderDrawer();if(S.set.on){modeState();renderSettings()}};
 
