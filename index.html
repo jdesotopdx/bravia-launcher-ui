@@ -850,18 +850,36 @@ function mdAvail(w,where){
   var rent=w.offers.filter(function(o){return o.k==='rent'}).sort(function(a,b){return (parseFloat((/\$([0-9.]+)/.exec(a.p)||[0,99])[1]))-(parseFloat((/\$([0-9.]+)/.exec(b.p)||[0,99])[1]))})[0];
   return{ok:where==='any',tag:rent?'Rent '+rent.p:''};
 }
+// Every film the launcher knows about, by poster hash: the whole watchlist, the extra films, and the curated rows.
+function mdAllFilms(){
+  var by={};
+  [DATA.pool,DATA.extra,DATA.tonight,DATA.lists,DATA.gems].forEach(function(a){(a||[]).forEach(function(c){if(c&&c.img&&!by[c.img])by[c.img]=c})});
+  return by;
+}
+// Moods for a film: the hand-written tags when there are any, then the genres from Letterboxd.
+var MD_GENRE={Documentary:['real'],Horror:['dark'],Thriller:['dark'],Mystery:['dark'],Crime:['dark'],Comedy:['funny'],Fantasy:['dream'],Animation:['dream'],'Science Fiction':['dream'],Music:['dream'],Action:['big'],Adventure:['big'],War:['big'],Western:['big'],History:['big'],Romance:['quiet'],Drama:['quiet']};
+function mdTags(h,c){
+  var T=((window.__MOOD||{}).tags||{})[h],D=(LBd().f||{})[h]||{},m=[],seen={};
+  function add(x){if(x&&!seen[x]){seen[x]=1;m.push(x)}}
+  if(T)T.m.forEach(add);
+  (D.g||[]).forEach(function(g){(MD_GENRE[g]||[]).forEach(add)});
+  if(!m.length)add('quiet');
+  // Drama alone reads as quiet; drama alongside a sharper genre keeps the sharper one first.
+  if(m.length>1&&m[0]==='quiet'&&(D.g||[]).indexOf('Drama')>=0&&!(T&&T.m[0]==='quiet')){m.splice(m.indexOf('quiet'),1);m.push('quiet')}
+  var n=+D.n||0,len=T?T.len:(n?(n<100?'s':n<=130?'m':'l'):'m');
+  return{t:(T&&T.t)||(c&&c.t)||D.t||'',m:m,len:len,note:T?T.note:(D.tg||[D.y||(c&&c.y)||'',(D.g||[]).slice(0,3).join(', ')].filter(Boolean).join('  \u00b7  ')),r:+D.r||0};
+}
 function mdResults(a){
-  var M=(window.__MOOD||{}).tags||{},seen=mdWatched(),out=[];
-  var byHash={};(DATA.tonight||[]).concat(DATA.lists||[],DATA.gems||[]).forEach(function(c){if(c.img)byHash[c.img]=c});
-  Object.keys(M).forEach(function(h){
-    var g=M[h],c=byHash[h];if(!c||seen[mdNorm(g.t)])return;
+  var by=mdAllFilms(),seen=mdWatched(),out=[];
+  Object.keys(by).forEach(function(h){
+    var c=by[h],g=mdTags(h,c);if(seen[mdNorm(g.t)]||seen[mdNorm(c.t)])return;
+    if(g.m.indexOf(a.mood)<0)return;
     var av=mdAvail(watchFor(c),'any');
     if(!av.ok)return;
-    var sc=(g.m.indexOf(a.mood)>=0?100:0)+(av.free?10:(av.tag.indexOf('On ')===0?6:0));
-    if(g.m[0]===a.mood)sc+=5;
-    out.push({c:c,g:g,av:av,sc:sc,ex:g.m.indexOf(a.mood)>=0});
+    var sc=(g.m[0]===a.mood?20:0)+(av.free?10:(av.tag.indexOf('On ')===0?6:0))+g.r*2+(a.len&&g.len===a.len?8:0);
+    out.push({c:c,g:g,av:av,sc:sc,ex:true});
   });
-  out.sort(function(x,y){return y.sc-x.sc});
+  out.sort(function(x,y){return y.sc-x.sc||(x.c.t<y.c.t?-1:1)});
   return out.slice(0,20);
 }
 function openMood(pre){
@@ -1220,6 +1238,6 @@ function reshuffle(){ // Tonight: 30 fresh picks from the whole watchlist, avoid
 Promise.resolve().then(function(){if(window.__DATA){var D=window.__DATA;Object.keys(D).forEach(function(k){DATA[k]=D[k]})}keepOrShuffle();mergeJw();jwStart()}).then(function(){
   applyTheme();loadState();renderHome();tick();weather();setInterval(tick,15000);setInterval(function(){if(beatGap()>180000&&idleHome()){keepOrShuffle();S.i.picks=0;renderHome()}else beat()},20000);screensNow(function(h){bootHtml=h});setInterval(askUpdates,30*60*1000);setInterval(weather,1800000);
 });
-window.__S=S;window.__key=key;window.__press=press;window.__open=open;window.__openFilm=openFilm;window.__theme=function(t){TV.set('theme',t);applyTheme()};
+window.__S=S;window.__key=key;window.__press=press;window.__open=open;window.__openFilm=openFilm;window.__md=mdResults;window.__openMood=openMood;window.__theme=function(t){TV.set('theme',t);applyTheme()};
 })();
 </script></body></html>
