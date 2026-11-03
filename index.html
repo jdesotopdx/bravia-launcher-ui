@@ -279,6 +279,7 @@ html[data-theme=honey] #sky::after{content:'';position:absolute;inset:0;backgrou
 <script src="watch.js"></script>
 <script src="mood.js"></script>
 <script src="lb.js"></script>
+<script src="picks.js"></script>
 <script>
 (function(){
 // ---------- bridge (mock when running outside the TV) ----------
@@ -869,18 +870,26 @@ function mdTags(h,c){
   var n=+D.n||0,len=T?T.len:(n?(n<100?'s':n<=130?'m':'l'):'m');
   return{t:(T&&T.t)||(c&&c.t)||D.t||'',m:m,len:len,note:T?T.note:(D.tg||[D.y||(c&&c.y)||'',(D.g||[]).slice(0,3).join(', ')].filter(Boolean).join('  \u00b7  ')),r:+D.r||0};
 }
+// Films the launcher already knows (the watchlist, lists, Tonight) by normalised title, so recommendations stay new.
+function mdKnown(){
+  var set=mdWatched(),by=mdAllFilms();
+  Object.keys(by).forEach(function(h){set[mdNorm(by[h].t)]=1});
+  Object.keys(LBd().f||{}).forEach(function(h){set[mdNorm(LBd().f[h].t)]=1});
+  return set;
+}
+// In the mood: a curated pool of 48 films per mood, chosen for this household's taste, outside the watchlist.
 function mdResults(a){
-  var by=mdAllFilms(),seen=mdWatched(),out=[];
-  Object.keys(by).forEach(function(h){
-    var c=by[h],g=mdTags(h,c);if(seen[mdNorm(g.t)]||seen[mdNorm(c.t)])return;
-    if(g.m.indexOf(a.mood)<0)return;
+  var known=mdKnown(),out=[];
+  ((window.__PICKS||{})[a.mood]||[]).forEach(function(c,n){
+    if(known[mdNorm(c.t)])return;
     var av=mdAvail(watchFor(c),'any');
-    if(!av.ok)return;
-    var sc=(g.m[0]===a.mood?20:0)+(av.free?10:(av.tag.indexOf('On ')===0?6:0))+g.r*2+(a.len&&g.len===a.len?8:0);
+    var g={t:c.t,m:[a.mood],len:c.n?(c.n<100?'s':c.n<=130?'m':'l'):'m',r:c.r||0,
+      note:c.tg||[c.y,(c.g||[]).slice(0,3).join(', ')].filter(Boolean).join('  \u00b7  ')};
+    var sc=(av.free?10:(av.tag.indexOf('On ')===0?6:0))+(a.len&&g.len===a.len?8:0)-n*0.01;
     out.push({c:c,g:g,av:av,sc:sc,ex:true});
   });
-  out.sort(function(x,y){return y.sc-x.sc||(x.c.t<y.c.t?-1:1)});
-  return out.slice(0,20);
+  out.sort(function(x,y){return y.sc-x.sc});
+  return out;
 }
 function openMood(pre){
   S.md={step:0,i:0,a:{},res:null};
@@ -1211,7 +1220,7 @@ function jwStart(){
   try{
     if(typeof TV==='undefined'||!TV.jwSync)return;
     var f=LBd().f,a=Object.keys(f).map(function(h){return [h,f[h].t,+f[h].y||0]});
-    (DATA.tonight||[]).concat(DATA.gems||[]).forEach(function(c){if(!f[c.img])a.push([c.img,c.t,+c.y||0])});
+    (DATA.tonight||[]).concat(DATA.gems||[],DATA.picks||[]).forEach(function(c){if(!f[c.img])a.push([c.img,c.t,+c.y||0])});
     TV.jwSync(JSON.stringify(a));
   }catch(e){}
 }
