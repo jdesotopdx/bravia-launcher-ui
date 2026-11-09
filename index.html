@@ -229,6 +229,7 @@ html[data-theme=honey] #sky::after{content:'';position:absolute;inset:0;backgrou
 .frow .n{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .frow .p{font-size:26px;font-weight:500;color:var(--dim)}
 .frow .p.free{color:var(--accent)}
+.frow.lt{flex:0 0 280px}
 #ftr.f{box-shadow:0 0 0 6px rgba(var(--ring),.95),0 0 44px rgba(var(--glow),.8)}
 .frow.f{background:var(--focusbg);color:var(--focusfg);box-shadow:0 0 0 4px rgba(var(--ring),.9),0 0 36px rgba(var(--glow),.8)}
 .frow.f .p{color:var(--focusfg);opacity:.85}
@@ -399,11 +400,11 @@ function tileHTML(p,key,label){
 }
 
 // ---------- home render ----------
-var PTABS=[{id:'tonight',l:'Tonight'},{id:'cw',l:'Continue watching'},{id:'gems',l:'Hidden gems'},{id:'mood',l:'In the mood'}];
+var PTABS=[{id:'tonight',l:'Tonight'},{id:'cw',l:'Continue watching'},{id:'gems',l:'Hidden gems'},{id:'mood',l:'In the mood'},{id:'later',l:'Watch later'}];
 function picks(){
   if(S.ptab==='cw')return W.map(function(c){return{t:c.t,sub:c.sub,img:c.img,data:true,p:c.p,portrait:c.portrait,w:c}});
   if(S.ptab==='mood')return MD_MOODS.map(function(m){return{t:m.a,sub:m.b,mood:m.id}});
-  var src=S.ptab==='gems'?(DATA.gems||[]):DATA.tonight;
+  var src=S.ptab==='gems'?(DATA.gems||[]):S.ptab==='later'?laterList():DATA.tonight;
   return src.map(function(c){return{t:c.t,sub:c.y||'',img:'posters/'+c.img+'.jpg',it:c}});
 }
 function pickImg(c){return c.img?'<img src="'+c.img.replace(/"/g,'&quot;')+'">':'<div class="noimg">'+esc(c.t)+'</div>'}
@@ -417,7 +418,7 @@ function renderPicks(){
   var list=picks(),h='';
   $('#ptabs').innerHTML=PTABS.map(function(t,n){return '<div class="pt'+(S.ptab===t.id?' on':'')+(S.zone==='tabs'&&S.i.tabs===n?' f':'')+'">'+t.l+'</div>'}).join('');
   if(!list.length){
-    $('#picks').innerHTML='<div class="empty">'+(S.ptab==='cw'?(W.noperm?'Allow TV listings access so Netflix, Prime and Plex can show up here':'Start something in Netflix, Prime Video or Plex and it appears here'):S.ptab==='gems'?'Hidden gems arrive with the Letterboxd sync':'Add films to your Letterboxd watchlist and they show up here')+'</div>';
+    $('#picks').innerHTML='<div class="empty">'+(S.ptab==='cw'?(W.noperm?'Allow TV listings access so Netflix, Prime and Plex can show up here':'Start something in Netflix, Prime Video or Plex and it appears here'):S.ptab==='gems'?'Hidden gems arrive with the Letterboxd sync':S.ptab==='later'?'Choose Watch later on any film or show page and it waits here':'Add films to your Letterboxd watchlist and they show up here')+'</div>';
     return;
   }
   list.forEach(function(c,n){
@@ -718,6 +719,15 @@ function filmRows(w){
   return rows;
 }
 function filmStatus(w,rows){var fr=[];if(w&&w.offers)w.offers.forEach(function(o){if(o.k==='free'&&fr.indexOf(o.n)<0)fr.push(o.n)});return !rows.length?'Not streaming right now':fr.length?'Free: '+fr.join(', '):'No free option right now'}
+// Watch later: any film or show can be saved from its page; the list lives on the TV and shows as a Home tab.
+function laterList(){var a=jget('later',[]);return Array.isArray(a)?a:[]}
+function isLater(it){return laterList().some(function(x){return x.img===it.img})}
+function toggleLater(it){
+  var a=laterList(),on=a.some(function(x){return x.img===it.img});
+  a=on?a.filter(function(x){return x.img!==it.img}):[{t:it.t,y:it.y||'',img:it.img}].concat(a);
+  jset('later',a);toast(on?'Removed from Watch later':'Saved to Watch later');return !on;
+}
+function withLater(rows,it){return rows.concat([{later:true,n:'Watch later',p:isLater(it)?'\u2713 Saved':'Save for later'}])}
 function openFilm(it){
   var w=watchFor(it),rows=filmRows(w),loading=0;
   if(!jwLocal(it.img)&&typeof TV!=='undefined'&&TV.http){
@@ -726,18 +736,18 @@ function openFilm(it){
       if(!S.film||S.film.it!==it)return;
       var w2=watchFor(it)||w,r2=filmRows(w2);
       if(!r2.length&&w&&w.offers&&w.offers.length)r2=filmRows(w);
-      S.film.loading=0;S.film.rows=r2;S.film.i=0;
+      S.film.loading=0;S.film.rows=withLater(r2,it);S.film.i=0;
       var st=$('#finfo .fr');if(st)st.textContent=filmStatus(w2,r2);
       if(!S.film.tr&&w2&&w2.trailer){S.film.tr=w2.trailer;playTrailer(w2.trailer)}
       if(!r2.length&&S.film.tr)S.film.onTr=true;
       renderFilm();
     });
   }
-  S.film={it:it,i:0,rows:rows,loading:loading,tr:(w&&w.trailer)||null};
+  S.film={it:it,i:0,rows:withLater(rows,it),loading:loading,tr:(w&&w.trailer)||null};
   var tr=$('#ftr');tr.innerHTML='';
   tr.style.backgroundImage='url(posters/'+it.img+'.jpg)';tr.style.backgroundSize='auto 100%';
   if(S.film.tr){playTrailer(S.film.tr);if(!rows.length)S.film.onTr=true}
-  else ytFind(it,function(tid){if(S.film&&S.film.it===it&&!S.film.tr){S.film.tr=tid;playTrailer(tid);if(!S.film.rows.length){S.film.onTr=true;renderFilm()}}});
+  else ytFind(it,function(tid){if(S.film&&S.film.it===it&&!S.film.tr){S.film.tr=tid;playTrailer(tid);if(!S.film.rows.some(function(r){return !r.later})){S.film.onTr=true;renderFilm()}}});
   var D=(LBd().f||{})[it.img]||null;
   $('#finfo').innerHTML='<h1>'+esc(it.t)+'</h1><div class="y">'+esc([it.y||'',D&&D.n?D.n+' min':'',D&&D.d&&D.d.length?D.d.join(', '):''].filter(Boolean).join('  \u00b7  '))+'</div>'
     +(D&&(D.r||(D.g&&D.g.length))?'<div class="rt">'+(D.r?'<b>\u2605 '+D.r.toFixed(1)+'</b>':'')+(D.g&&D.g.length?'<span>'+esc(D.g.join(', '))+'</span>':'')+'</div>':'')
@@ -767,9 +777,9 @@ function ytFind(it,cb){
 }
 function renderFilm(){
   $('#ftr').classList.toggle('f',!!S.film.onTr);
-  $('#fof').innerHTML=S.film.rows.map(function(r,n){return '<div class="frow'+(n===S.film.i&&!S.film.onTr?' f':'')+'"><span class="n">'+esc(r.n)+'</span><span class="p'+(r.free?' free':'')+'">'+esc(r.p)+'</span></div>'}).join('');
+  $('#fof').innerHTML=S.film.rows.map(function(r,n){return '<div class="frow'+(r.later?' lt':'')+(n===S.film.i&&!S.film.onTr?' f':'')+'"><span class="n">'+esc(r.n)+'</span><span class="p'+(r.free?' free':'')+'">'+esc(r.p)+'</span></div>'}).join('');
 }
-function closeFilm(){closeBig();try{if(S.film&&S.film.pl)S.film.pl.destroy()}catch(e){}S.film=null;$('#film').classList.remove('on');$('#ftr').innerHTML=''}
+function closeFilm(){closeBig();try{if(S.film&&S.film.pl)S.film.pl.destroy()}catch(e){}S.film=null;$('#film').classList.remove('on');$('#ftr').innerHTML='';if(S.ptab==='later'&&!S.lb&&!S.md){S.i.picks=Math.max(0,Math.min(S.i.picks,laterList().length-1));renderPicks();focusHome()}}
 function filmKey(k){
   var f=S.film,n=f.rows.length;
   if(f.big){if(k==='ArrowDown'||k==='ArrowUp')closeBig();return}
@@ -793,6 +803,7 @@ function deepLink(u,pkg){
 function filmPress(){
   var f=S.film,r=f.rows[f.i];if(f.big){playPause();return}
   if(f.onTr){openBig();return}
+  if(r&&r.later){toggleLater(f.it);f.rows[f.i].p=isLater(f.it)?'\u2713 Saved':'Save for later';renderFilm();return}
   if(!r||(!r.u&&!r.pkg))return;
   // Straight into the service's app, on the film's page when the app accepts the link, else the app's home.
   if(r.pkg){
