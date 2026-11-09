@@ -925,9 +925,17 @@ function renderMood(){
   $('#mdh').textContent=r.length?'Tonight\u2019s picks':'Nothing matches yet';
   $('#mdsub').textContent=(r.length&&!r.some(function(x){return x.ex}))?'No exact match for that mood. These are the closest':'';
   $('#mdres').style.display='block';
-  $('#mdres').innerHTML='<div id="mdin">'+r.map(function(x,n){return '<div class="mr'+(n===m.i?' f':'')+'"><div class="pp"><img src="posters/'+x.c.img+'.jpg"></div><div class="tt">'+esc(x.g.t)+'</div><div class="nt">'+esc(x.g.note)+'</div><div class="av">'+esc(x.av.tag)+'</div></div>'}).join('')+'</div>';
-  var kids=$('#mdin').children,top=kids[Math.floor(m.i/5)*5];
-  if(top)$('#mdin').style.transform='translateY('+(-(top.offsetTop-kids[0].offsetTop))+'px)'
+  // Build the 48 cards once per result list; key presses only move the focus ring and slide the grid.
+  var box=$('#mdres'),inn=$('#mdin');
+  if(!inn||box._r!==r){
+    box.innerHTML='<div id="mdin">'+r.map(function(x){return '<div class="mr"><div class="pp"><img src="posters/'+x.c.img+'.jpg"></div><div class="tt">'+esc(x.g.t)+'</div><div class="nt">'+esc(x.g.note)+'</div><div class="av">'+esc(x.av.tag)+'</div></div>'}).join('')+'</div>';
+    box._r=r;inn=$('#mdin');inn.style.transition='none';void inn.offsetWidth;
+  }
+  var kids=inn.children;
+  for(var q=0;q<kids.length;q++)kids[q].classList.toggle('f',q===m.i);
+  var top=kids[Math.floor(m.i/5)*5];
+  if(top)inn.style.transform='translateY('+(-(top.offsetTop-kids[0].offsetTop))+'px)';
+  if(inn.style.transition==='none'){void inn.offsetWidth;inn.style.transition=''}
   $('#mdhint').textContent='';
 }
 function moodKey(k){
