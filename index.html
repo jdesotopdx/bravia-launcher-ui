@@ -45,9 +45,19 @@ html[data-theme=honey] #sky::after{content:'';position:absolute;inset:0;backgrou
 .hb.f{background:var(--focusbg);transform:scale(1.12);box-shadow:0 0 0 4px rgba(var(--ring),.9),0 0 36px rgba(var(--glow),.8)}
 .hb.f svg{stroke:var(--focusfg)}
 /* Rows under the title: Today's question, then the picks. */
-#pill{left:96px;top:206px;width:1728px;height:52px;border-radius:26px;background:var(--pill);display:flex;align-items:center;gap:32px;padding:0 36px}
-#pill b{font-size:17px;font-weight:600;color:var(--accent);letter-spacing:.8px}
-#pill span{font-size:25px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pill{left:96px;top:206px;width:1728px;height:52px;border-radius:26px;background:var(--pill);display:flex;align-items:center;gap:20px;padding:0 36px}
+#pill svg{width:26px;height:26px;flex:none;stroke:var(--dim);fill:none;stroke-width:2;stroke-linecap:round}
+#pill form{flex:1;min-width:0;display:flex}
+#qin{flex:1;min-width:0;background:none;border:0;outline:0;padding:0;color:var(--ink);font:400 25px Inter,system-ui,sans-serif;caret-color:var(--accent)}
+#qin::placeholder{color:var(--dim);opacity:1}
+#pill.f{box-shadow:0 0 0 4px rgba(var(--ring),.95),0 0 36px rgba(var(--glow),.8)}
+#pill.f svg{stroke:var(--ink)}
+/* Search results: the same card grid as In the mood. */
+#srh{left:96px;top:72px;font-size:54px;font-weight:600;max-width:1728px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#srsub{left:96px;top:146px;font-size:28px;color:var(--dim)}
+#srres{left:80px;top:226px;width:1760px;height:820px;overflow:hidden}
+#srin{display:grid;grid-template-columns:repeat(5,1fr);gap:24px;padding:10px 16px 0;transition:transform .25s ease}
+#srin .noimg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--noimg);color:var(--dim);font-size:26px;padding:24px;text-align:center}
 #ptabs{left:96px;top:292px;display:flex;gap:40px}
 .pt{font-size:28px;font-weight:500;color:var(--dim);padding:6px 2px;border-radius:12px}
 .pt.on{color:var(--ink);font-weight:600}
@@ -248,7 +258,7 @@ html[data-theme=honey] #sky::after{content:'';position:absolute;inset:0;backgrou
    <div class="hb" id="bApps"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg></div>
    <div class="hb" id="bSet"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1"/></svg></div>
   </div>
-  <div id="pill" class="abs"><b>TODAY’S QUESTION</b><span id="q"></span></div>
+  <div id="pill" class="abs"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg><form id="qf" action="#"><input id="qin" type="text" placeholder="Search films and shows" readonly autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"></form></div>
   <div id="ptabs" class="abs"></div>
   <div id="picks" class="abs"></div>
   <div id="shelf" class="abs"><div id="apps"></div></div>
@@ -272,6 +282,7 @@ html[data-theme=honey] #sky::after{content:'';position:absolute;inset:0;backgrou
  </div>
  <div id="mood" class="ov"><div id="mdh" class="abs"></div><div id="mdsub" class="abs"></div><div id="mdopts" class="abs"></div><div id="mdres" class="abs"></div><div id="mdhint" class="abs"></div></div>
  <div id="lb" class="ov"><div id="lbtop" class="abs"></div><div id="lbbody" class="abs"></div></div>
+ <div id="srch" class="ov"><div id="srh" class="abs"></div><div id="srsub" class="abs"></div><div id="srres" class="abs"></div></div>
  <div id="film" class="ov"><div id="ftr" class="abs"></div><div id="finfo" class="abs"></div><div id="fof" class="abs"></div></div>
  <div id="sheet"><div id="sbox"><h3 id="sh"></h3><div id="sopts"></div></div></div>
  <div id="toast"></div>
@@ -349,7 +360,7 @@ var BUILT={};DEFAULT_PINS.forEach(function(d){if(d.i)BUILT[d.p]=d.i});
 var HIDE_RE=/^(com\.sony\.|com\.sonypicturescore|com\.sonyericsson\.|com\.google\.android\.play\.games|com\.google\.android\.videos|tv\.samba\.)/;
 /* Pins added after the first release: saved pin lists on the TV get them once. */
 var PIN_ADDS=[{v:2,pins:['com.disney.disneyplus','com.hulu.livingroomplus']},{v:3,pins:['com.wnba.centercourt']},{v:4,pins:['com.peacocktv.peacockandroid','com.cbs.ott']}];
-var S={apps:[],installed:{},pins:[],hidden:[],zone:'apps',i:{top:0,tabs:0,picks:0,apps:0},ptab:'tonight',drawer:false,tab:'all',gi:0,tabf:true,sheet:null,sheetI:0,
+var S={apps:[],installed:{},pins:[],hidden:[],zone:'apps',i:{top:0,search:0,tabs:0,picks:0,apps:0},typing:false,sr:null,ptab:'tonight',drawer:false,tab:'all',gi:0,tabf:true,sheet:null,sheetI:0,
   set:{on:false,screen:'main',i:0},mm:null,mode:{}};
 
 function loadState(){
@@ -441,8 +452,6 @@ function tick(){
   var d=new Date(),h=d.getHours()%12||12,m=('0'+d.getMinutes()).slice(-2);
   $('#clock').textContent=h+':'+m;
   $('#date').textContent=d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
-  var tz=d.getTimezoneOffset(),day=Math.floor((d.getTime()-tz*60000)/86400000),P=DATA.prompts;
-  $('#q').textContent=P[day%P.length];
   applyTheme();
 }
 function weather(){
@@ -458,6 +467,7 @@ function focusHome(){
   document.querySelectorAll('#page .f').forEach(function(e){e.classList.remove('f')});
   var z=S.zone,el=null,n=S.i[z];
   if(z==='top')el=(n===0?$('#bMM'):n===1?$('#bApps'):$('#bSet'));
+  if(z==='search')el=$('#pill');
   if(z==='tabs')el=$('#ptabs').children[n];
   if(z==='picks')el=$('#picks').children[n];
   if(z==='apps')el=$('#apps').children[n];
@@ -469,7 +479,7 @@ function focusHome(){
   var a=S.i.apps,vis=7,total=S.pins.length,sh=Math.min(Math.max(0,total-vis),Math.max(0,a-(vis-2)))*248;
   $('#apps').style.transform='translateX('+(z==='apps'?-sh:0)+'px)';
 }
-function lens(){return{top:3,tabs:PTABS.length,picks:picks().length,apps:S.pins.length}}
+function lens(){return{top:3,search:1,tabs:PTABS.length,picks:picks().length,apps:S.pins.length}}
 
 // ---------- drawer ----------
 function drawerList(){
@@ -779,7 +789,7 @@ function renderFilm(){
   $('#ftr').classList.toggle('f',!!S.film.onTr);
   $('#fof').innerHTML=S.film.rows.map(function(r,n){return '<div class="frow'+(r.later?' lt':'')+(n===S.film.i&&!S.film.onTr?' f':'')+'"><span class="n">'+esc(r.n)+'</span><span class="p'+(r.free?' free':'')+'">'+esc(r.p)+'</span></div>'}).join('');
 }
-function closeFilm(){closeBig();try{if(S.film&&S.film.pl)S.film.pl.destroy()}catch(e){}S.film=null;$('#film').classList.remove('on');$('#ftr').innerHTML='';if(S.ptab==='later'&&!S.lb&&!S.md){S.i.picks=Math.max(0,Math.min(S.i.picks,laterList().length-1));renderPicks();focusHome()}}
+function closeFilm(){closeBig();try{if(S.film&&S.film.pl)S.film.pl.destroy()}catch(e){}S.film=null;$('#film').classList.remove('on');$('#ftr').innerHTML='';if(S.sr)renderSearch();if(S.ptab==='later'&&!S.lb&&!S.md){S.i.picks=Math.max(0,Math.min(S.i.picks,laterList().length-1));renderPicks();focusHome()}}
 function filmKey(k){
   var f=S.film,n=f.rows.length;
   if(f.big){if(k==='ArrowDown'||k==='ArrowUp')closeBig();return}
@@ -1128,7 +1138,7 @@ function lbApply(){
   if(z.ls&&z.ls.length)L.ls=z.ls.map(function(l){return {n:l.n,k:'mine',b:l.b,f:ok(l.f)}}).filter(function(l){return l.f.length}).concat((L.ls||[]).filter(function(l){return l.k==='liked'}));
 }
 // A film added since the last build has no poster in the app yet: show Letterboxd's own poster instead.
-function lbPoster(h){var f=(LBd().f||{})[h];return f&&f.p?f.p:''}
+function lbPoster(h){var f=(LBd().f||{})[h];return f&&f.p?f.p:(srPosters()[h]||'')}
 document.addEventListener('error',function(e){
   var im=e.target;if(!im||im.tagName!=='IMG'||im._fb)return;
   var m=/posters\/([^\/.]+)\.jpg/.exec(im.getAttribute('src')||'');if(!m)return;
@@ -1269,6 +1279,70 @@ function lbBack(){
   closeLb();
 }
 
+// ---------- search: the bar under the title finds any film or show and opens its usual page ----------
+var SRP=null;
+function srPosters(){if(!SRP){try{SRP=JSON.parse(localStorage.getItem('srp')||'{}')||{}}catch(e){SRP={}}}return SRP}
+function srKeep(h,u){var P=srPosters();if(P[h]===u)return;P[h]=u;var k=Object.keys(P);if(k.length>400)delete P[k[0]];try{localStorage.setItem('srp',JSON.stringify(P))}catch(e){}}
+var qin=$('#qin');
+function startTyping(){S.typing=true;qin.readOnly=false;qin.focus();try{qin.select()}catch(e){}}
+function endTyping(){S.typing=false;qin.blur();qin.readOnly=true}
+function submitSearch(){var q=qin.value.replace(/\s+/g,' ').trim();endTyping();if(q)doSearch(q)}
+$('#qf').addEventListener('submit',function(e){e.preventDefault();if(S.typing)submitSearch()});
+function srQuery(s,poster,cb){
+  var Q='query($s:String!){popularTitles(country:US,first:20,filter:{searchQuery:$s,objectTypes:[MOVIE,SHOW]}){edges{node{objectType content(country:US,language:en){title originalReleaseYear'+(poster?' posterUrl':'')+'}}}}}';
+  var id='sr'+Date.now()+Math.random();
+  HTTPCB[id]=function(st,t){var e=null;try{e=JSON.parse(t).data.popularTitles.edges}catch(x){}cb(st===200&&Array.isArray(e)?e:null)};
+  try{TV.http(id,'https://apis.justwatch.com/graphql','POST',JSON.stringify({query:Q,variables:{s:s}}),'{"Content-Type":"application/json"}')}catch(x){delete HTTPCB[id];cb(null)}
+}
+function doSearch(q){
+  S.sr={q:q,items:[],i:0,msg:'Searching…'};renderSearch();$('#srch').classList.add('on');
+  if(typeof TV==='undefined'||!TV.http){S.sr.msg='Search works on the TV';renderSearch();return}
+  var got=function(e){
+    if(!S.sr||S.sr.q!==q)return;
+    if(!e){S.sr.msg='Search is unavailable right now. Check the internet connection and try again';renderSearch();return}
+    var seen={};
+    S.sr.items=e.map(function(x){
+      var c=(x.node||{}).content||{};if(!c.title)return null;
+      var y=c.originalReleaseYear?String(c.originalReleaseYear):'',h=lbHash(c.title,y);if(seen[h])return null;seen[h]=1;
+      var u=c.posterUrl?'https://images.justwatch.com'+c.posterUrl.replace('{profile}','s592').replace('{format}','jpg'):'';
+      if(u&&!lbPoster(h))srKeep(h,u);
+      return{t:c.title,y:y,img:h,show:x.node.objectType==='SHOW'};
+    }).filter(Boolean);
+    S.sr.msg=S.sr.items.length?'':'Nothing found. Press Back and try another title';
+    renderSearch();
+  };
+  srQuery(q,true,function(e){if(e)got(e);else srQuery(q,false,got)});
+}
+function renderSearch(){
+  var r=S.sr;if(!r)return;
+  $('#srh').textContent='Results for “'+r.q+'”';
+  $('#srsub').textContent=r.msg||'';
+  var box=$('#srres'),inn=$('#srin');
+  if(!inn||box._r!==r.items){
+    box.innerHTML='<div id="srin">'+r.items.map(function(c){
+      return '<div class="mr"><div class="pp"><img src="posters/'+c.img+'.jpg" data-h="'+c.img+'" alt="'+esc(c.t)+'"></div><div class="tt">'+esc(c.t)+'</div><div class="nt">'+esc([c.y,c.show?'Series':'Film'].filter(Boolean).join('  ·  '))+'</div><div class="av">'+(isLater(c)?'✓ Watch later':'')+'</div></div>'}).join('')+'</div>';
+    box._r=r.items;inn=$('#srin');inn.style.transition='none';void inn.offsetWidth;
+  }
+  var kids=inn.children;if(!kids.length)return;
+  if(!box._w){box._w=1;box.addEventListener('error',function(e){var im=e.target;if(!im||im.tagName!=='IMG')return;
+    var u=lbPoster(im.getAttribute('data-h')||'');
+    if(u&&!im._e){im._e=1;im._fb=1;im.src=u;return}
+    var d=document.createElement('div');d.className='noimg';d.textContent=im.alt;if(im.parentNode)im.parentNode.replaceChild(d,im)},true)}
+  for(var q=0;q<kids.length;q++){kids[q].classList.toggle('f',q===r.i);var av=kids[q].querySelector('.av');if(av)av.textContent=isLater(r.items[q])?'✓ Watch later':''}
+  var top=kids[Math.floor(r.i/5)*5];
+  if(top)inn.style.transform='translateY('+(-(top.offsetTop-kids[0].offsetTop))+'px)';
+  if(inn.style.transition==='none'){void inn.offsetWidth;inn.style.transition=''}
+}
+function searchKey(k){
+  var r=S.sr,n=r.items.length;if(!n)return;
+  if(k==='ArrowRight')r.i=Math.min(n-1,r.i+1);
+  if(k==='ArrowLeft')r.i=Math.max(0,r.i-1);
+  if(k==='ArrowDown')r.i=Math.min(n-1,r.i+5);
+  if(k==='ArrowUp')r.i=Math.max(0,r.i-5);
+  renderSearch();
+}
+function searchPress(){var c=S.sr.items[S.sr.i];if(c)openFilm({t:c.t,y:c.y,img:c.img})}
+function closeSearch(){S.sr=null;$('#srch').classList.remove('on');$('#srres').innerHTML='';S.zone='search';focusHome()}
 // ---------- actions ----------
 function toast(m){var t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(function(){t.style.display='none'},2400)}
 function open(pkg,label){
@@ -1282,6 +1356,7 @@ function savePins(){jset('pins',S.pins)}
 function press(long){
   if(S.sheet){var o=S.sheet.o[S.sheetI];closeSheet();if(o&&o.f)o.f();return}
   if(S.film){filmPress();return}
+  if(S.sr){if(!long)searchPress();return}
   if(S.lb){lbPress();return}
   if(S.md){moodPress();return}
   if(S.set.on){settingsPress();return}
@@ -1301,6 +1376,7 @@ function press(long){
   }
   var z=S.zone,n=S.i[z];
   if(z==='top'){n===0?openMatch():n===1?openDrawer('all'):openSettings();return}
+  if(z==='search'){if(!long)startTyping();return}
   if(z==='tabs'){S.ptab=PTABS[n].id;S.i.picks=0;renderPicks();focusHome();return}
   if(z==='apps'){
     var p=S.pins[n];if(!p)return;
@@ -1326,6 +1402,7 @@ function press(long){
 function key(k){
   if(S.sheet)return sheetKey(k);
   if(S.film)return filmKey(k);
+  if(S.sr)return searchKey(k);
   if(S.lb)return lbKey(k);
   if(S.md)return moodKey(k);
   if(S.set.on)return settingsKey(k);
@@ -1334,7 +1411,7 @@ function key(k){
   var z=S.zone,L=lens();
   if(k==='ArrowRight')S.i[z]=Math.min(L[z]-1,S.i[z]+1);
   if(k==='ArrowLeft')S.i[z]=Math.max(0,S.i[z]-1);
-  var order=['top','tabs','picks','apps'].filter(function(x){return x!=='picks'||L[x]>0}),zi=order.indexOf(z);
+  var order=['top','search','tabs','picks','apps'].filter(function(x){return x!=='picks'||L[x]>0}),zi=order.indexOf(z);
   if(zi<0){zi=0}
   if(k==='ArrowDown'){S.zone=order[Math.min(order.length-1,zi+1)]}
   if(k==='ArrowUp'){S.zone=order[Math.max(0,zi-1)];if(S.zone==='top')S.i.top=1}
@@ -1343,7 +1420,9 @@ function key(k){
 }
 function goBack(){
   if(S.sheet){closeSheet();return}
+  if(S.typing){endTyping();return}
   if(S.film){if(S.film.big){closeBig()}else closeFilm();return}
+  if(S.sr){closeSearch();return}
   if(S.lb){lbBack();return}
   if(S.md){moodBack();return}
   if(S.set.on){if(S.set.screen!=='main'){S.set.screen='main';S.set.i=0;renderSettings()}else closeSettings();return}
@@ -1360,7 +1439,7 @@ window.onBack=function(){
 // Screen updates: ask for them on every Home press or return, then swap in the new screens as soon as they land.
 var bootHtml=null,lastAsk=0;
 function screensNow(cb){try{var x=new XMLHttpRequest();x.open('GET','index.html?t='+Date.now());x.onload=function(){cb(x.responseText||'')};x.send()}catch(e){}}
-function idleHome(){return !S.film&&!S.lb&&!S.md&&!S.mm&&!S.sheet&&!S.drawer&&!(S.set&&S.set.on)}
+function idleHome(){return !S.typing&&!S.sr&&!S.film&&!S.lb&&!S.md&&!S.mm&&!S.sheet&&!S.drawer&&!(S.set&&S.set.on)}
 function askUpdates(){
   if(Date.now()-lastAsk<60000)return;lastAsk=Date.now();
   try{TV.checkUpdates()}catch(e){return}
@@ -1369,7 +1448,9 @@ function askUpdates(){
 window.onHome=function(){askUpdates();
   clearTimeout(backT);backT=null;
   if(S.sheet)closeSheet();
+  if(S.typing)endTyping();
   if(S.film)closeFilm();
+  if(S.sr){S.sr=null;$('#srch').classList.remove('on');$('#srres').innerHTML=''}
   if(S.lb)closeLb();
   if(S.md)closeMood();
   if(S.mm)closeMatch();
@@ -1382,6 +1463,12 @@ window.onResume=function(){askUpdates();if(backT){clearTimeout(backT);backT=null
 var hold=null,held=false;
 addEventListener('keydown',function(e){
   var k=e.key;
+  if(S.typing){
+    if(k==='Enter'){e.preventDefault();submitSearch()}
+    else if(k==='Escape'||k==='GoBack'){e.preventDefault();backAt=Date.now();endTyping()}
+    else if(k==='ArrowDown'||k==='ArrowUp'){e.preventDefault();endTyping();key(k)}
+    return;
+  }
   if(k==='Enter'||k===' '||k==='Select'){
     e.preventDefault();
     if(!hold){held=false;hold=setTimeout(function(){held=true;press(true)},600)}
@@ -1395,6 +1482,7 @@ addEventListener('keydown',function(e){
 },true);
 addEventListener('keyup',function(e){
   var k=e.key;
+  if(S.typing)return;
   if(k==='Enter'||k===' '||k==='Select'){
     e.preventDefault();
     if(hold){clearTimeout(hold);hold=null;if(!held)press(false);held=false}
